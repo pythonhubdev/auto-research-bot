@@ -1,0 +1,54 @@
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+repos:
+-   repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+    -   id: check-ast
+    -   id: trailing-whitespace
+    -   id: check-toml
+    -   id: end-of-file-fixer
+
+-   repo: https://github.com/asottile/add-trailing-comma
+    rev: v3.1.0
+    hooks:
+    -   id: add-trailing-comma
+
+-   repo: https://github.com/macisamuele/language-formatters-pre-commit-hooks
+    rev: v2.13.0
+    hooks:
+    -   id: pretty-format-yaml
+        args:
+        -   --autofix
+        -   --preserve-quotes
+        -   --indent=4
+
+-   repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.4.9
+    hooks:
+    -   id: ruff
+        args: [--fix]
+    -   id: ruff-format
+
+-   repo: local
+    hooks:
+    -   id: black
+        name: Format with Black
+        entry: poetry run black
+        language: system
+        types: [python]
+
+#    -   id: isort
+#        name: isort
+#        entry: poetry run isort
+#        language: system
+#        types: [python]
+
+    -   id: mypy
+        name: Validate types with MyPy
+        entry: poetry run mypy
+        language: system
+        types: [python]
+        pass_filenames: false
+        args:
+        -   "auto_research_bot"
