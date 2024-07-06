@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "auto-research-bot"
 version = "0.1.0"
-description = ""
+description = "A Streamlit-based bot for automated research and report generation using Langchain and SQLAlchemy. Effortlessly create and manage chat sessions, generate detailed summaries, and save reports with ease."
 authors = ["Vetrichelvan <pythonhubdev@gmail.com>"]
 readme = "README.md"
 
