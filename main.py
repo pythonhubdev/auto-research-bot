@@ -1,13 +1,29 @@
 import asyncio
 
 from dotenv import load_dotenv
-from streamlit import (button, cache_resource, error, header, selectbox, session_state, set_page_config, spinner,
-                       subheader, success, text_area, text_input, title, write)
+from loguru import logger
+from streamlit import (
+    button,
+    cache_resource,
+    error,
+    header,
+    selectbox,
+    session_state,
+    set_page_config,
+    spinner,
+    subheader,
+    success,
+    text_area,
+    text_input,
+    title,
+    write,
+)
 
 from auto_research_bot.core import LangchainInteractions
 from auto_research_bot.dao import SummaryDAO
 from auto_research_bot.dao.chat_dao import ChatDAO
 from auto_research_bot.database import Database
+from auto_research_bot.utils.logging import configure_logging
 
 set_page_config(
     page_title="Automated Research and Report Generation",
@@ -26,10 +42,11 @@ def init_app():
 
 init_app()
 
+configure_logging()
+langchain_interactions = LangchainInteractions()  # Initialize the LangchainInteractions class
+
 
 def main():
-    langchain_interactions = LangchainInteractions()  # Initialize the LangchainInteractions class
-
     title("Automated Research and Report Generation")
 
     new_chat_label = text_input("Enter a label for the new chat:")
@@ -39,6 +56,11 @@ def main():
             chat_id = ChatDAO.create(new_chat_label)
             session_state.chat_id = chat_id
             session_state.chat_label = new_chat_label
+            session_state.topic = ""
+            session_state.generated_summary = ""
+            session_state.summaries = []
+            session_state.summary_saved = False
+            logger.info(f"New chat created: {chat_id}, {new_chat_label}")
         else:
             error("Please enter a label for the new chat.")
 
@@ -50,49 +72,64 @@ def main():
         session_state.chat_id = chat_id
         session_state.chat_label = next(chat.chat_label for chat in chats if chat.id == chat_id)
         summaries = SummaryDAO.get_all(chat_id)
-        session_state.generated_summary = summaries[-1].summary_text if summaries else ""
-        session_state.topic = summaries[-1].topic if summaries else ""
         session_state.summaries = summaries
+        session_state.summary_saved = False
+        if summaries:
+            session_state.generated_summary = summaries[-1].summary_text
+            session_state.topic = summaries[-1].topic
+        else:
+            session_state.generated_summary = ""
+            session_state.topic = ""
+        logger.info(f"Chat selected: {chat_id}, {session_state.chat_label}")
 
     if "chat_id" in session_state:
         chat_id = session_state.chat_id
 
-        summaries = session_state.summaries
-        topic_disabled = bool(summaries)
+        topic_disabled = bool(session_state.generated_summary) and session_state.summary_saved
 
         topic_input = text_input(
             "Enter a topic:",
-            value=session_state.topic,
+            value=session_state.get("topic", ""),
             disabled=topic_disabled,
-            key="topic_input",
+            key=f"topic_input_{chat_id}",
         )
 
-        if button("Generate Report") and not topic_disabled:
+        if button("Generate Report", key=f"generate_report_{chat_id}") and not topic_disabled:
             if topic_input:
                 with spinner("Generating report..."):
+                    # Mocked summary text
                     summary = asyncio.run(langchain_interactions.execute_research(topic_input))
                     session_state.generated_summary = summary
-                    write("Generated Summary:")
-                    text_area("Summary", summary, height=300, key="generated_summary")
-
-                    if button("Save Summary"):
-                        SummaryDAO.create(chat_id, topic_input, summary)
-                        success("Summary saved to the database.")
-                        session_state.topic = topic_input
-                        session_state.summaries = SummaryDAO.get_all(chat_id)
-            else:
-                error("Please enter a topic to generate a report.")
+                    session_state.summary_saved = False
+                    logger.info(f"Report generated for topic: {topic_input}")
 
         header("Generated Summary")
 
-        if len(summaries) > 0:
-            summary = summaries[0]
+        if session_state.generated_summary and not session_state.summary_saved:
+            text_area("Summary", session_state.generated_summary, height=300, key=f"generated_summary_{chat_id}")
+            if button("Save Summary", key=f"save_summary_{chat_id}"):
+                logger.info(
+                    f"Attempting to save summary: chat_id={chat_id}, topic={topic_input}, "
+                    f"summary={session_state.generated_summary}",
+                )
+                SummaryDAO.create(chat_id, topic_input, session_state.generated_summary)
+                success("Summary saved to the database.")
+                session_state.topic = topic_input
+                session_state.summaries = SummaryDAO.get_all(chat_id)
+                session_state.summary_saved = True
+                session_state.generated_summary = ""  # Clear the generated summary after saving
+                logger.info(f"Summary saved: {session_state.summaries}")
+
+        if len(session_state.summaries) > 0:
+            summary = session_state.summaries[0]
             subheader(f"Topic: {summary.topic}")
             summary_input = text_area("", value=summary.summary_text, height=300, key=f"summary_{summary.id}")
             if button("Update Summary", key=f"update_summary_{summary.id}"):
+                logger.info(f"Attempting to update summary: id={summary.id}, new_text={summary_input}")
                 SummaryDAO.update(summary.id, summary_input)
                 success("Summary updated successfully.")
                 session_state.summaries = SummaryDAO.get_all(chat_id)
+                logger.info(f"Summary updated: {session_state.summaries}")
 
     else:
         write("Please create a new chat or select an existing chat.")

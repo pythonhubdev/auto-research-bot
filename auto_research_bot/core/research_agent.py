@@ -6,6 +6,7 @@ from langchain_core.runnables import RunnableSerializable
 from langchain_openai import ChatOpenAI
 
 from auto_research_bot.service import MediaWikiService, NewsService
+from auto_research_bot.utils import TextUtils
 
 
 class ResearchAgent:
@@ -18,7 +19,14 @@ class ResearchAgent:
     async def gather_data(topic: str) -> dict[str, Any]:
         wiki_data = await MediaWikiService.fetch_topic(topic)
         news_data = await NewsService.fetch_topic(topic)
-        return {"wikipedia": wiki_data, "news": news_data}
+        if not wiki_data:
+            wiki_data = "No data found."
+        if not news_data:
+            news_data = ["No data found."]
+        return {
+            "wikipedia": TextUtils.truncate_text(wiki_data, 7500),
+            "news": TextUtils.truncate_text("\n".join(news_data), 7500),
+        }
 
     @staticmethod
     def structure_data_prompt() -> PromptTemplate:

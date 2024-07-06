@@ -1,3 +1,3 @@
-from auto_research_bot.utils.wiki_text_parser import MediaWikiUtils
+from auto_research_bot.utils.text_utils import TextUtils
 
-__all__ = ["MediaWikiUtils"]
+__all__ = ["TextUtils"]
