@@ -50,7 +50,8 @@ langchain_interactions = LangchainInteractions()  # Initialize the LangchainInte
 def main():
     title("Automated Research and Report Generation")
 
-    new_chat_label = text_input("Enter a label for the new chat:")
+    new_chat_label_key = "new_chat_label_" + str(session_state.get("new_chat_counter", 0))
+    new_chat_label = text_input("Enter a label for the new chat:", key=new_chat_label_key)
 
     if button("New Chat"):
         if new_chat_label:
@@ -63,6 +64,8 @@ def main():
             session_state.summary_saved = False
             session_state.topic_disabled = False
             logger.info(f"New chat created: {chat_id}, {new_chat_label}")
+            session_state.new_chat_counter = session_state.get("new_chat_counter", 0) + 1
+            rerun()
         else:
             error("Please enter a label for the new chat.")
 
@@ -117,7 +120,6 @@ def main():
                 session_state.summary_saved = True
                 session_state.generated_summary = ""  # Clear the generated summary after saving
                 session_state.topic_disabled = True
-                logger.info(f"Summary saved: {session_state.summaries}")
                 rerun()
 
         elif session_state.summary_saved and len(session_state.summaries) > 0:
