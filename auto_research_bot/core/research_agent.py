@@ -26,6 +26,7 @@ class ResearchAgent:
         return {
             "wikipedia": TextUtils.truncate_text(wiki_data, 7500),
             "news": TextUtils.truncate_text("\n".join(news_data), 7500),
+            "topic": topic,
         }
 
     @staticmethod
@@ -38,11 +39,12 @@ class ResearchAgent:
             "{wikipedia}\n\n"
             "News Data:\n"
             "{news}\n\n"
-            "Please structure the above data into key points."
+            "Please structure the above data into key points. Also, please ignore irrelevant information and only focus"
+            " on the topic at hand which is {topic}"
         )
         prompt = PromptTemplate(
             template=template,
-            input_variables=["wikipedia", "news"],
+            input_variables=["wikipedia", "news", "topic"],
             template_format="f-string",
         )
         return prompt

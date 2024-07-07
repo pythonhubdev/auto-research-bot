@@ -17,6 +17,7 @@ from streamlit import (
     text_input,
     title,
     write,
+    rerun,
 )
 
 from auto_research_bot.core import LangchainInteractions
@@ -60,6 +61,7 @@ def main():
             session_state.generated_summary = ""
             session_state.summaries = []
             session_state.summary_saved = False
+            session_state.topic_disabled = False
             logger.info(f"New chat created: {chat_id}, {new_chat_label}")
         else:
             error("Please enter a label for the new chat.")
@@ -74,53 +76,51 @@ def main():
         summaries = SummaryDAO.get_all(chat_id)
         session_state.summaries = summaries
         session_state.summary_saved = False
+        session_state.topic_disabled = False
         if summaries:
             session_state.generated_summary = summaries[-1].summary_text
             session_state.topic = summaries[-1].topic
+            session_state.topic_disabled = True
         else:
             session_state.generated_summary = ""
             session_state.topic = ""
         logger.info(f"Chat selected: {chat_id}, {session_state.chat_label}")
-
     if "chat_id" in session_state:
         chat_id = session_state.chat_id
-
-        topic_disabled = bool(session_state.generated_summary) and session_state.summary_saved
 
         topic_input = text_input(
             "Enter a topic:",
             value=session_state.get("topic", ""),
-            disabled=topic_disabled,
+            disabled=session_state.topic_disabled,
             key=f"topic_input_{chat_id}",
         )
 
-        if button("Generate Report", key=f"generate_report_{chat_id}") and not topic_disabled:
+        if not session_state.topic_disabled and button("Generate Report", key=f"generate_report_{chat_id}"):
             if topic_input:
                 with spinner("Generating report..."):
                     # Mocked summary text
                     summary = asyncio.run(langchain_interactions.execute_research(topic_input))
+                    session_state.topic = topic_input
                     session_state.generated_summary = summary
                     session_state.summary_saved = False
                     logger.info(f"Report generated for topic: {topic_input}")
-
-        header("Generated Summary")
-
         if session_state.generated_summary and not session_state.summary_saved:
+            header("Generated Summary")
             text_area("Summary", session_state.generated_summary, height=300, key=f"generated_summary_{chat_id}")
             if button("Save Summary", key=f"save_summary_{chat_id}"):
                 logger.info(
-                    f"Attempting to save summary: chat_id={chat_id}, topic={topic_input}, "
-                    f"summary={session_state.generated_summary}",
+                    f"Attempting to save summary: chat_id={chat_id}, topic={session_state.topic}",
                 )
-                SummaryDAO.create(chat_id, topic_input, session_state.generated_summary)
+                SummaryDAO.create(chat_id, session_state.topic, session_state.generated_summary)
                 success("Summary saved to the database.")
-                session_state.topic = topic_input
                 session_state.summaries = SummaryDAO.get_all(chat_id)
                 session_state.summary_saved = True
                 session_state.generated_summary = ""  # Clear the generated summary after saving
+                session_state.topic_disabled = True
                 logger.info(f"Summary saved: {session_state.summaries}")
+                rerun()
 
-        if len(session_state.summaries) > 0:
+        elif session_state.summary_saved and len(session_state.summaries) > 0:
             summary = session_state.summaries[0]
             subheader(f"Topic: {summary.topic}")
             summary_input = text_area("", value=summary.summary_text, height=300, key=f"summary_{summary.id}")
