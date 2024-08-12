@@ -18,7 +18,7 @@ opentelemetry-instrumentation-fastapi = "^0.46b0"
 opentelemetry-instrumentation-sqlalchemy = "^0.46b0"
 pydantic-settings = "^2.3.4"
 sqlalchemy = "^2.0.31"
-streamlit = "^1.36.0"
+streamlit = "^1.37.0"
 
 
 mwparserfromhell = "^0.6.6"
