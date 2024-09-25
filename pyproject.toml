@@ -23,7 +23,7 @@ streamlit = "^1.36.0"
 
 mwparserfromhell = "^0.6.6"
 openai = "^1.35.10"
-langchain-community = "^0.2.6"
+langchain-community = "^0.2.9"
 langchain-openai = "^0.1.14"
 alembic = "^1.13.2"
 [tool.poetry.group.dev.dependencies]
